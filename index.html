@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Grafis 2D</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            align-items: center;
+        }
+        
+        .tool-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .tool-group label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .tool-btn {
+            padding: 8px 16px;
+            border: 2px solid #007bff;
+            background: white;
+            color: #007bff;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .tool-btn:hover {
+            background: #007bff;
+            color: white;
+        }
+        
+        .tool-btn.active {
+            background: #007bff;
+            color: white;
+        }
+        
+        .color-input {
+            width: 50px;
+            height: 35px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .thickness-input {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        
+        .canvas-container {
+            position: relative;
+            background: white;
+        }
+        
+        #canvas {
+            border: 2px solid #dee2e6;
+            cursor: crosshair;
+            display: block;
+        }
+        
+        .transform-panel {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .transform-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .transform-input {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            text-align: center;
+        }
+        
+        .tool-btn:disabled {
+            background: #e9ecef;
+            color: #6c757d;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+        }
+        
+        .tool-btn:disabled:hover {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        
+        .status {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .object-list {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .object-item {
+            padding: 5px 10px;
+            margin: 2px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .object-item:hover {
+            background: #e9ecef;
+        }
+        
+        .object-item.selected {
+            background: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Aplikasi Grafis 2D</h1>
+            <p>Klik dan drag untuk menggambar objek</p>
+        </div>
+        
+        <div class="toolbar">
+            <div class="tool-group">
+                <label>Alat Gambar:</label>
+                <div style="display: flex; gap: 5px;">
+                    <button class="tool-btn active" onclick="setTool('point')" id="pointBtn">Titik</button>
+                    <button class="tool-btn" onclick="setTool('line')" id="lineBtn">Garis</button>
+                    <button class="tool-btn" onclick="setTool('rectangle')" id="rectBtn">Persegi</button>
+                    <button class="tool-btn" onclick="setTool('ellipse')" id="ellipseBtn">Ellipse</button>
+                </div>
+            </div>
+            
+            <div class="tool-group">
+                <label>Warna:</label>
+                <input type="color" class="color-input" id="colorPicker" value="#000000">
+            </div>
+            
+            <div class="tool-group">
+                <label>Ketebalan:</label>
+                <input type="number" class="thickness-input" id="thicknessPicker" value="2" min="1" max="20">
+            </div>
+            
+            <div class="tool-group">
+                <label>Aksi:</label>
+                <div style="display: flex; gap: 5px;">
+                    <button class="tool-btn" onclick="clearCanvas()">🗑️ Hapus Semua</button>
+                    <button class="tool-btn" onclick="deleteSelected()">❌ Hapus Terpilih</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas" width="800" height="500"></canvas>
+            <div class="status" id="status">Siap menggambar</div>
+        </div>
+        
+        <div class="transform-panel">
+            <h3>🔧 Transformasi Objek Terpilih</h3>
+            <div id="transformMessage" style="margin-bottom: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; color: #856404;">
+                Pilih objek terlebih dahulu untuk melakukan transformasi
+            </div>
+            <div class="transform-controls">
+                <div class="tool-group">
+                    <label>📍 Translasi (Pindah Posisi):</label>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <span style="font-size: 12px;">X:</span>
+                        <input type="number" class="transform-input" id="translateX" placeholder="50" value="0">
+                        <span style="font-size: 12px;">Y:</span>
+                        <input type="number" class="transform-input" id="translateY" placeholder="30" value="0">
+                        <button class="tool-btn" onclick="applyTranslation()" id="translateBtn" disabled>🔄 Pindah</button>
+                    </div>
+                </div>
+                
+                <div class="tool-group">
+                    <label>🔄 Rotasi (Putar Objek):</label>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <input type="number" class="transform-input" id="rotateAngle" placeholder="45" value="45">
+                        <span style="font-size: 12px;">derajat</span>
+                        <button class="tool-btn" onclick="applyRotation()" id="rotateBtn" disabled>↻ Putar</button>
+                    </div>
+                </div>
+                
+                <div class="tool-group">
+                    <label>📏 Skala (Ubah Ukuran):</label>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <span style="font-size: 12px;">X:</span>
+                        <input type="number" class="transform-input" id="scaleX" placeholder="1.5" value="1.5" step="0.1" min="0.1">
+                        <span style="font-size: 12px;">Y:</span>
+                        <input type="number" class="transform-input" id="scaleY" placeholder="1.5" value="1.5" step="0.1" min="0.1">
+                        <button class="tool-btn" onclick="applyScaling()" id="scaleBtn" disabled>📐 Skala</button>
+                    </div>
+                </div>
+                
+                <div class="tool-group" style="margin-top: 15px;">
+                    <label>⚡ Transformasi Cepat:</label>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button class="tool-btn" onclick="quickTransform('left')" id="quickLeft" disabled>← Kiri</button>
+                        <button class="tool-btn" onclick="quickTransform('right')" id="quickRight" disabled>Kanan →</button>
+                        <button class="tool-btn" onclick="quickTransform('up')" id="quickUp" disabled>↑ Atas</button>
+                        <button class="tool-btn" onclick="quickTransform('down')" id="quickDown" disabled>↓ Bawah</button>
+                        <button class="tool-btn" onclick="quickTransform('rotate90')" id="quickRotate" disabled>↻ 90°</button>
+                        <button class="tool-btn" onclick="quickTransform('bigger')" id="quickBigger" disabled>🔍+ Besar</button>
+                        <button class="tool-btn" onclick="quickTransform('smaller')" id="quickSmaller" disabled>🔍- Kecil</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="object-list">
+            <h3>📋 Daftar Objek</h3>
+            <div id="objectList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        let currentTool = 'point';
+        let isDrawing = false;
+        let startX, startY;
+        let objects = [];
+        let selectedObjectIndex = -1;
+        let previewShape = null;
+
+        // Object class
+        class DrawingObject {
+            constructor(type, x, y, width, height, color, thickness) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.width = width || 0;
+                this.height = height || 0;
+                this.color = color;
+                this.thickness = thickness;
+                this.id = Date.now() + Math.random();
+            }
+
+            draw(context, isSelected = false) {
+                context.strokeStyle = this.color;
+                context.fillStyle = this.color;
+                context.lineWidth = this.thickness;
+
+                if (isSelected) {
+                    context.shadowColor = 'rgba(0, 123, 255, 0.5)';
+                    context.shadowBlur = 10;
+                } else {
+                    context.shadowColor = 'transparent';
+                    context.shadowBlur = 0;
+                }
+
+                switch (this.type) {
+                    case 'point':
+                        context.beginPath();
+                        context.arc(this.x, this.y, this.thickness + 2, 0, 2 * Math.PI);
+                        context.fill();
+                        break;
+                    
+                    case 'line':
+                        context.beginPath();
+                        context.moveTo(this.x, this.y);
+                        context.lineTo(this.x + this.width, this.y + this.height);
+                        context.stroke();
+                        break;
+                    
+                    case 'rectangle':
+                        context.beginPath();
+                        context.rect(this.x, this.y, this.width, this.height);
+                        context.stroke();
+                        break;
+                    
+                    case 'ellipse':
+                        context.beginPath();
+                        context.ellipse(
+                            this.x + this.width/2, 
+                            this.y + this.height/2,
+                            Math.abs(this.width/2), 
+                            Math.abs(this.height/2),
+                            0, 0, 2 * Math.PI
+                        );
+                        context.stroke();
+                        break;
+                }
+                
+                context.shadowColor = 'transparent';
+                context.shadowBlur = 0;
+            }
+
+            contains(x, y) {
+                switch (this.type) {
+                    case 'point':
+                        const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
+                        return distance <= this.thickness + 5;
+                    
+                    case 'line':
+                        // Simplified line hit detection
+                        const lineDistance = Math.abs(
+                            (this.height * x - this.width * y + 
+                             (this.x + this.width) * this.y - 
+                             (this.y + this.height) * this.x) /
+                            Math.sqrt(this.height ** 2 + this.width ** 2)
+                        );
+                        return lineDistance <= this.thickness + 3;
+                    
+                    case 'rectangle':
+                        return x >= this.x && x <= this.x + this.width &&
+                               y >= this.y && y <= this.y + this.height;
+                    
+                    case 'ellipse':
+                        const centerX = this.x + this.width/2;
+                        const centerY = this.y + this.height/2;
+                        const a = Math.abs(this.width/2);
+                        const b = Math.abs(this.height/2);
+                        return ((x - centerX) ** 2) / (a ** 2) + ((y - centerY) ** 2) / (b ** 2) <= 1;
+                }
+                return false;
+            }
+
+            translate(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+            }
+
+            rotate(angle, centerX, centerY) {
+                const rad = angle * Math.PI / 180;
+                const cos = Math.cos(rad);
+                const sin = Math.sin(rad);
+                
+                // Translate to origin
+                const tempX = this.x - centerX;
+                const tempY = this.y - centerY;
+                
+                // Rotate
+                this.x = tempX * cos - tempY * sin + centerX;
+                this.y = tempX * sin + tempY * cos + centerY;
+                
+                // For line objects, also rotate the end point
+                if (this.type === 'line') {
+                    const endX = tempX + this.width;
+                    const endY = tempY + this.height;
+                    const newEndX = endX * cos - endY * sin;
+                    const newEndY = endX * sin + endY * cos;
+                    this.width = newEndX - (this.x - centerX);
+                    this.height = newEndY - (this.y - centerY);
+                }
+            }
+
+            scale(scaleX, scaleY, centerX, centerY) {
+                // Scale position relative to center
+                this.x = centerX + (this.x - centerX) * scaleX;
+                this.y = centerY + (this.y - centerY) * scaleY;
+                
+                // Scale dimensions
+                this.width *= scaleX;
+                this.height *= scaleY;
+            }
+        }
+
+        // Tool selection
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tool + 'Btn').classList.add('active');
+            updateStatus(`Alat aktif: ${tool}`);
+        }
+
+        // Canvas event listeners
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('click', selectObject);
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            const pos = getMousePos(e);
+            isDrawing = true;
+            startX = pos.x;
+            startY = pos.y;
+            
+            if (currentTool === 'point') {
+                const color = document.getElementById('colorPicker').value;
+                const thickness = parseInt(document.getElementById('thicknessPicker').value);
+                const point = new DrawingObject('point', startX, startY, 0, 0, color, thickness);
+                objects.push(point);
+                redrawCanvas();
+                updateObjectList();
+                updateStatus(`Titik dibuat di (${Math.round(startX)}, ${Math.round(startY)})`);
+                isDrawing = false;
+            }
+        }
+
+        function draw(e) {
+            if (!isDrawing || currentTool === 'point') return;
+            
+            const pos = getMousePos(e);
+            const color = document.getElementById('colorPicker').value;
+            const thickness = parseInt(document.getElementById('thicknessPicker').value);
+            
+            // Create preview shape
+            previewShape = new DrawingObject(
+                currentTool,
+                Math.min(startX, pos.x),
+                Math.min(startY, pos.y),
+                Math.abs(pos.x - startX),
+                Math.abs(pos.y - startY),
+                color,
+                thickness
+            );
+            
+            if (currentTool === 'line') {
+                previewShape.x = startX;
+                previewShape.y = startY;
+                previewShape.width = pos.x - startX;
+                previewShape.height = pos.y - startY;
+            }
+            
+            redrawCanvas();
+            
+            // Draw preview
+            ctx.setLineDash([5, 5]);
+            ctx.globalAlpha = 0.7;
+            previewShape.draw(ctx);
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1.0;
+            
+            updateStatus(`Menggambar ${currentTool} dari (${Math.round(startX)}, ${Math.round(startY)}) ke (${Math.round(pos.x)}, ${Math.round(pos.y)})`);
+        }
+
+        function stopDrawing(e) {
+            if (!isDrawing || currentTool === 'point') return;
+            
+            const pos = getMousePos(e);
+            const color = document.getElementById('colorPicker').value;
+            const thickness = parseInt(document.getElementById('thicknessPicker').value);
+            
+            let shape = new DrawingObject(
+                currentTool,
+                Math.min(startX, pos.x),
+                Math.min(startY, pos.y),
+                Math.abs(pos.x - startX),
+                Math.abs(pos.y - startY),
+                color,
+                thickness
+            );
+            
+            if (currentTool === 'line') {
+                shape.x = startX;
+                shape.y = startY;
+                shape.width = pos.x - startX;
+                shape.height = pos.y - startY;
+            }
+            
+            // Only add if shape has some size (except for points)
+            if (currentTool === 'point' || Math.abs(pos.x - startX) > 1 || Math.abs(pos.y - startY) > 1) {
+                objects.push(shape);
+                updateObjectList();
+                updateStatus(`${currentTool} selesai dibuat`);
+            }
+            
+            isDrawing = false;
+            previewShape = null;
+            redrawCanvas();
+        }
+
+        function selectObject(e) {
+            const pos = getMousePos(e);
+            selectedObjectIndex = -1;
+            
+            // Check objects in reverse order (top to bottom)
+            for (let i = objects.length - 1; i >= 0; i--) {
+                if (objects[i].contains(pos.x, pos.y)) {
+                    selectedObjectIndex = i;
+                    break;
+                }
+            }
+            
+            redrawCanvas();
+            updateObjectList();
+            updateTransformButtons();
+            
+            if (selectedObjectIndex >= 0) {
+                updateStatus(`Objek ${objects[selectedObjectIndex].type} terpilih`);
+                document.getElementById('transformMessage').innerHTML = 
+                    `✅ Objek <strong>${objects[selectedObjectIndex].type.toUpperCase()}</strong> terpilih. Sekarang Anda dapat melakukan transformasi.`;
+                document.getElementById('transformMessage').style.background = '#d4edda';
+                document.getElementById('transformMessage').style.borderColor = '#c3e6cb';
+                document.getElementById('transformMessage').style.color = '#155724';
+            } else {
+                updateStatus('Tidak ada objek yang terpilih');
+                document.getElementById('transformMessage').innerHTML = 
+                    '⚠️ Pilih objek terlebih dahulu untuk melakukan transformasi';
+                document.getElementById('transformMessage').style.background = '#fff3cd';
+                document.getElementById('transformMessage').style.borderColor = '#ffeaa7';
+                document.getElementById('transformMessage').style.color = '#856404';
+            }
+        }
+
+        function updateTransformButtons() {
+            const hasSelection = selectedObjectIndex >= 0;
+            const buttons = ['translateBtn', 'rotateBtn', 'scaleBtn', 'quickLeft', 'quickRight', 
+                           'quickUp', 'quickDown', 'quickRotate', 'quickBigger', 'quickSmaller'];
+            
+            buttons.forEach(btnId => {
+                document.getElementById(btnId).disabled = !hasSelection;
+            });
+        }
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            objects.forEach((obj, index) => {
+                obj.draw(ctx, index === selectedObjectIndex);
+            });
+        }
+
+        function updateObjectList() {
+            const listContainer = document.getElementById('objectList');
+            listContainer.innerHTML = '';
+            
+            objects.forEach((obj, index) => {
+                const item = document.createElement('div');
+                item.className = 'object-item';
+                if (index === selectedObjectIndex) {
+                    item.classList.add('selected');
+                }
+                item.textContent = `${obj.type.toUpperCase()} - (${Math.round(obj.x)}, ${Math.round(obj.y)})`;
+                item.onclick = () => {
+                    selectedObjectIndex = index;
+                    redrawCanvas();
+                    updateObjectList();
+                    updateTransformButtons();
+                    updateStatus(`Objek ${objects[selectedObjectIndex].type} terpilih`);
+                    document.getElementById('transformMessage').innerHTML = 
+                        `✅ Objek <strong>${objects[selectedObjectIndex].type.toUpperCase()}</strong> terpilih. Sekarang Anda dapat melakukan transformasi.`;
+                    document.getElementById('transformMessage').style.background = '#d4edda';
+                    document.getElementById('transformMessage').style.borderColor = '#c3e6cb';
+                    document.getElementById('transformMessage').style.color = '#155724';
+                };
+                listContainer.appendChild(item);
+            });
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        // Transformation functions
+        function applyTranslation() {
+            if (selectedObjectIndex < 0) {
+                alert('⚠️ Pilih objek terlebih dahulu!');
+                return;
+            }
+            
+            const dx = parseFloat(document.getElementById('translateX').value) || 0;
+            const dy = parseFloat(document.getElementById('translateY').value) || 0;
+            
+            objects[selectedObjectIndex].translate(dx, dy);
+            redrawCanvas();
+            updateObjectList();
+            updateStatus(`✅ Translasi diterapkan: (${dx}, ${dy})`);
+            
+            // Reset input values
+            document.getElementById('translateX').value = '0';
+            document.getElementById('translateY').value = '0';
+        }
+
+        function applyRotation() {
+            if (selectedObjectIndex < 0) {
+                alert('⚠️ Pilih objek terlebih dahulu!');
+                return;
+            }
+            
+            const angle = parseFloat(document.getElementById('rotateAngle').value) || 0;
+            const obj = objects[selectedObjectIndex];
+            const centerX = obj.x + obj.width / 2;
+            const centerY = obj.y + obj.height / 2;
+            
+            obj.rotate(angle, centerX, centerY);
+            redrawCanvas();
+            updateObjectList();
+            updateStatus(`✅ Rotasi diterapkan: ${angle}°`);
+        }
+
+        function applyScaling() {
+            if (selectedObjectIndex < 0) {
+                alert('⚠️ Pilih objek terlebih dahulu!');
+                return;
+            }
+            
+            const scaleX = parseFloat(document.getElementById('scaleX').value) || 1;
+            const scaleY = parseFloat(document.getElementById('scaleY').value) || 1;
+            
+            if (scaleX <= 0 || scaleY <= 0) {
+                alert('⚠️ Nilai skala harus lebih besar dari 0!');
+                return;
+            }
+            
+            const obj = objects[selectedObjectIndex];
+            const centerX = obj.x + obj.width / 2;
+            const centerY = obj.y + obj.height / 2;
+            
+            obj.scale(scaleX, scaleY, centerX, centerY);
+            redrawCanvas();
+            updateObjectList();
+            updateStatus(`✅ Skala diterapkan: (${scaleX}, ${scaleY})`);
+        }
+
+        function quickTransform(action) {
+            if (selectedObjectIndex < 0) {
+                alert('⚠️ Pilih objek terlebih dahulu!');
+                return;
+            }
+            
+            const obj = objects[selectedObjectIndex];
+            
+            switch(action) {
+                case 'left':
+                    obj.translate(-20, 0);
+                    updateStatus('⬅️ Objek dipindah ke kiri');
+                    break;
+                case 'right':
+                    obj.translate(20, 0);
+                    updateStatus('➡️ Objek dipindah ke kanan');
+                    break;
+                case 'up':
+                    obj.translate(0, -20);
+                    updateStatus('⬆️ Objek dipindah ke atas');
+                    break;
+                case 'down':
+                    obj.translate(0, 20);
+                    updateStatus('⬇️ Objek dipindah ke bawah');
+                    break;
+                case 'rotate90':
+                    const centerX = obj.x + obj.width / 2;
+                    const centerY = obj.y + obj.height / 2;
+                    obj.rotate(90, centerX, centerY);
+                    updateStatus('↻ Objek diputar 90°');
+                    break;
+                case 'bigger':
+                    const bigCenterX = obj.x + obj.width / 2;
+                    const bigCenterY = obj.y + obj.height / 2;
+                    obj.scale(1.2, 1.2, bigCenterX, bigCenterY);
+                    updateStatus('🔍+ Objek diperbesar');
+                    break;
+                case 'smaller':
+                    const smallCenterX = obj.x + obj.width / 2;
+                    const smallCenterY = obj.y + obj.height / 2;
+                    obj.scale(0.8, 0.8, smallCenterX, smallCenterY);
+                    updateStatus('🔍- Objek diperkecil');
+                    break;
+            }
+            
+            redrawCanvas();
+            updateObjectList();
+        }
+
+        function clearCanvas() {
+            if (confirm('Yakin ingin menghapus semua objek?')) {
+                objects = [];
+                selectedObjectIndex = -1;
+                redrawCanvas();
+                updateObjectList();
+                updateTransformButtons();
+                updateStatus('Canvas dibersihkan');
+                document.getElementById('transformMessage').innerHTML = 
+                    '⚠️ Pilih objek terlebih dahulu untuk melakukan transformasi';
+                document.getElementById('transformMessage').style.background = '#fff3cd';
+                document.getElementById('transformMessage').style.borderColor = '#ffeaa7';
+                document.getElementById('transformMessage').style.color = '#856404';
+            }
+        }
+
+        function deleteSelected() {
+            if (selectedObjectIndex < 0) {
+                alert('⚠️ Pilih objek terlebih dahulu!');
+                return;
+            }
+            
+            objects.splice(selectedObjectIndex, 1);
+            selectedObjectIndex = -1;
+            redrawCanvas();
+            updateObjectList();
+            updateTransformButtons();
+            updateStatus('🗑️ Objek terpilih dihapus');
+            document.getElementById('transformMessage').innerHTML = 
+                '⚠️ Pilih objek terlebih dahulu untuk melakukan transformasi';
+            document.getElementById('transformMessage').style.background = '#fff3cd';
+            document.getElementById('transformMessage').style.borderColor = '#ffeaa7';
+            document.getElementById('transformMessage').style.color = '#856404';
+        }
+
+        // Initialize
+        updateStatus('Aplikasi siap digunakan');
+        updateTransformButtons();
+    </script>
+</body>
+</html>
